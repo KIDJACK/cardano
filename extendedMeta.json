@@ -1,0 +1,60 @@
+{
+    "how-to-implement": "in your meta.json - define *extended* with url to this (json) file - https://raw.githubusercontent.com/cardanians/adapools.org/master/example-meta.json",
+    "info": {
+        "url_png_icon_64x64": "https://raw.githubusercontent.com/KIDJACK/cardano/main/GAIN64.png",
+        "url_png_logo": "https://raw.githubusercontent.com/KIDJACK/cardano/main/GAIN64.png",
+        "location": "Japan, Niigata",
+        "social": {
+            "twitter_handle": "GAIN_SPO",
+            "telegram_handle": "",
+            "facebook_handle": "",
+            "youtube_handle": "",
+            "twitch_handle": "",
+            "discord_handle": "",
+            "github_handle": ""
+        },
+        "company": {
+            "name": "",
+            "addr": "",
+            "city": "Niigata",
+            "country": "Japan",
+            "company_id": "",
+            "vat_id": ""
+        },
+        "about": {
+            "me": "",
+            "server": "AWS_Japan_RAM_16GB",
+            "company": ""
+        }
+    },
+    "my-pool-ids": {
+        "0": "9b922e2f7bd657422f5b6db4d8fe14f013b74b2fbbb1908e2d9e8fbe",
+        "1": ""
+    },
+    "when-satured-then-recommend": {
+        "0": "",
+        "1": ""
+    },
+    "telegram-admin-handle": {
+        "0": ""
+    },
+    "adapools_ext": {
+        "prometheus": {
+            "0": {
+                "name": "relay 1 eu",
+                "type": "relay",
+                "key": "example_get_own_on_adapools.org/connect"
+            },
+            "1": {
+                "name": "relay 2 usa",
+                "type": "relay",
+                "key": "example_get_own_on_adapools.org/connect"
+            },
+            "2": {
+                "name": "block producer home",
+                "type": "bp",
+                "key": "example_get_own_on_adapools.org/connect"
+            }
+        }
+    }
+}
