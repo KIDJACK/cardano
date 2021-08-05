@@ -3,6 +3,6 @@
 "ticker":"GAIN",
 "discordId":"845557086984732723",
 "pool-list":"true",
-"poolMetaData":"https://github.com/KIDJACK/cardano/raw/main/poolMetaData.json",
-"validation":"https://github.com/KIDJACK/cardano/raw/main/sjg-validation.json"
+"poolMetaData":"https://raw.githubusercontent.com/KIDJACK/cardano/main/poolMetaData.json",
+"validation":"https://raw.githubusercontent.com/KIDJACK/cardano/main/sjg-validation.json"
 }
