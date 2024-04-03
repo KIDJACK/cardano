@@ -5,10 +5,10 @@
         "url_png_logo": "https://raw.githubusercontent.com/KIDJACK/cardano/main/GAIN.png",
         "social": {
             "twitter_handle": "GAIN_SPO",
-            "youtube_handle": "/channel/UCuLA2lhShp0WUhEkkXCk4cw"
+            "youtube_handle": ""
         },
         "about": {
-            "server": "AWSLS_16GB_Japan"
+            "server": "This pool use server for Amazon Web Service Lightsail, 32 GB Memory, 8 vCPUs Processing, 640 GB SSD Storage, 7 TB Transfer, from $160/month plan"
         }
     },
     "vrf-app": "51d688f45a6d5d7ad3b"
