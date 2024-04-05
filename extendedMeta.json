@@ -3,12 +3,19 @@
     "info": {
         "url_png_icon_64x64": "https://raw.githubusercontent.com/KIDJACK/cardano/main/GAIN64.png",
         "url_png_logo": "https://raw.githubusercontent.com/KIDJACK/cardano/main/GAIN.png",
+        "location": "Niigata, Japan",
         "social": {
             "twitter_handle": "GAIN_SPO",
-            "youtube_handle": ""
+            "telegram_handle": "",
+            "facebook_handle": "",
+            "youtube_handle": "",
+            "twitch_handle": "",
+            "discord_handle": "",
+            "github_handle": ""
         },
         "about": {
-            "server": "This pool use server for Amazon Web Service Lightsail, 32 GB Memory, 8 vCPUs Processing, 640 GB SSD Storage, 7 TB Transfer, from $160/month plan"
+            "me": "GAIN SPO Profile...Date of birth 1992 / Male / Nationality : Japanese / Occupation : Super Generalist (Game creator)"
+            "server": "GAIN use server...Amazon Web Service Lightsail / 32GB Memory / 8vCPUs Processing / 640GB SSD Storage / 7TB Transfer"
         }
     },
     "vrf-app": "51d688f45a6d5d7ad3b"
