@@ -1,0 +1,33 @@
+--- kabu_prime_backtest.py
++++ kabu_prime_backtest.py
+@@ -493,6 +493,7 @@
+         return None
+     entry_idx = start_idx
+     entry_raw: float | None = None
++    entry_intraday_limit = False
+     if rule.entry_mode == "next_open":
+         entry_raw = float(df.iloc[entry_idx]["open"])
+     elif rule.entry_mode == "pullback3":
+@@ -508,6 +509,7 @@
+             if float(bar["low"]) <= limit_price:
+                 entry_idx = idx
+                 entry_raw = limit_price
++                entry_intraday_limit = True
+                 break
+         if entry_raw is None:
+             return None
+@@ -522,6 +524,15 @@
+     for idx in range(entry_idx, last_idx + 1):
+         bar = df.iloc[idx]
+         o, h, l = float(bar["open"]), float(bar["high"]), float(bar["low"])
++        if idx == entry_idx and entry_intraday_limit:
++            # The daily high/open can occur before an intraday buy-limit fill.  To avoid
++            # an impossible same-day target profit, only a subsequent adverse excursion
++            # is recognized on the fill day; targets start from the following session.
++            if stop is not None and l <= stop:
++                exit_idx, exit_raw, reason = idx, float(stop), "stop_on_limit_fill_day"
++                break
++            continue
+         if stop is not None and o <= stop:
+             exit_idx, exit_raw, reason = idx, o, "stop_gap"
+             break
