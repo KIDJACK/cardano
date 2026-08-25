@@ -1,0 +1,17 @@
+--- kabu_prime_backtest.py
++++ kabu_prime_backtest.py
+@@ -394,9 +394,13 @@
+             skipped["missing_symbol"] += 1
+             continue
+         signal_ts = pd.Timestamp(event["signal_date"])
+-        found = row_on_or_before(df, signal_ts)
+-        bench_found = row_on_or_before(bench, signal_ts)
++        # Conservative point-in-time rule: ranking-day OHLC is never used as a feature,
++        # even when the archived snapshot happened after the close.  This removes any
++        # ambiguity about intraday capture time and prevents same-day-close look-ahead.
++        feature_cutoff = signal_ts - pd.Timedelta(days=1)
++        found = row_on_or_before(df, feature_cutoff)
++        bench_found = row_on_or_before(bench, feature_cutoff)
+         if found is None or bench_found is None:
+             skipped["no_feature_date"] += 1
+             continue
