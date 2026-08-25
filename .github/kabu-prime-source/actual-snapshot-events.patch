@@ -1,0 +1,31 @@
+--- kabu_prime_backtest.py
++++ kabu_prime_backtest.py
+@@ -260,20 +260,16 @@
+     if not parsed:
+         raise RuntimeError("No archived Prime ranking rows could be reconstructed")
+     df = pd.DataFrame(parsed)
+-    # Combine multiple ranking windows on the same site date into one ticker-day event.
+-    df = df.sort_values(["signal_date", "code", "window_hours", "rank", "capture_timestamp"])
+-    grouped = []
+-    for (_, _), g in df.groupby(["signal_date", "code"], sort=True):
+-        first = g.iloc[0].to_dict()
+-        first["rank"] = int(g["rank"].min())
+-        first["window_hours"] = int(g["window_hours"].min())
+-        first["res_count"] = int(g["res_count"].max())
+-        first["yahoo_topics"] = int(g["yahoo_topics"].max())
+-        first["quality_tag"] = bool(g["quality_tag"].any())
+-        first["themes"] = " | ".join(sorted({x for x in g["themes"].astype(str) if x}))
+-        grouped.append(first)
+-    events = pd.DataFrame(grouped).sort_values(["signal_date", "rank", "code"]).reset_index(drop=True)
++    # Keep each archived snapshot/window as an actual observed event.  Combining the
++    # best rank from one window with the shortest window from another would create a
++    # synthetic signal that never appeared on the site.  Duplicate rows from an exact
++    # replay are removed, while same-day observations from different snapshots remain.
++    events = (
++        df.sort_values(["signal_date", "capture_timestamp", "window_hours", "rank", "code"])
++        .drop_duplicates(["capture_timestamp", "signal_date", "code", "window_hours", "rank"])
++        .reset_index(drop=True)
++    )
+     audit["prime_rows_raw"] = len(df)
+     audit["ticker_day_events"] = len(events)
+     audit["unique_tickers"] = int(events["code"].nunique())
