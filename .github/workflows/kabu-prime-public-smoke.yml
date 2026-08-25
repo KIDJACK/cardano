@@ -37,15 +37,17 @@ jobs:
           echo 'de8a156d4e2f4c8f360aac8915b6894aa305d8a666b636495cc4b395bfc1861d  /tmp/kabu_prime_backtest.py.gz' | sha256sum --check --strict
           gzip -dc /tmp/kabu_prime_backtest.py.gz > /tmp/kabu_prime_backtest.py
           echo '377c41cc1f02738ffde452d171cd3fde4302f85726a46740bd9c9a8730c9642b  /tmp/kabu_prime_backtest.py' | sha256sum --check --strict
-          (
-            cd /tmp
-            patch --dry-run -p0 < "$GITHUB_WORKSPACE/.github/kabu-prime-source/prior-close.patch"
-            patch -p0 < "$GITHUB_WORKSPACE/.github/kabu-prime-source/prior-close.patch"
-          )
-          echo 'e91ff26744f62c4c69a899f321c1eba7a1ec80822bc0a00e5c3bf765da5a07ac  /tmp/kabu_prime_backtest.py' | sha256sum --check --strict
+          for patch_file in "$GITHUB_WORKSPACE"/.github/kabu-prime-source/*.patch; do
+            (
+              cd /tmp
+              patch --dry-run -p0 < "$patch_file"
+              patch -p0 < "$patch_file"
+            )
+          done
+          echo 'd2dc7658967883f8d9db1d8f0624e396c43b9786d94230cf25ca569f0267bf44  /tmp/kabu_prime_backtest.py' | sha256sum --check --strict
           python -m py_compile /tmp/kabu_prime_backtest.py
           cp /tmp/kabu_prime_backtest.py out/source/
-          cp .github/kabu-prime-source/prior-close.patch out/source/
+          cp .github/kabu-prime-source/*.patch out/source/
           sha256sum out/source/* > out/source/source.sha256
 
       - name: Enumerate archived ranking snapshots
@@ -87,6 +89,7 @@ jobs:
             echo 'purpose=temporary public computation of generic public-market backtest'
             echo "commit=$GITHUB_SHA"
             echo 'ranking_day_ohlc_used_for_features=0'
+            echo 'synthetic_cross_window_rank_signal=0'
             echo 'broker_connections=0'
             echo 'orders=0'
             echo 'account_data=0'
