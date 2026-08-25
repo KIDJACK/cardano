@@ -1,0 +1,40 @@
+name: Temporary Kabu Prime public smoke
+
+on:
+  push:
+    branches:
+      - agent/kabu-prime-public-exec-20260826
+    paths:
+      - '.github/workflows/kabu-prime-public-smoke.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe public data sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          UA='Mozilla/5.0 (compatible; KabuPrimeBacktest/1.0; research-only)'
+          curl -A "$UA" -L --retry 3 --retry-delay 2 --max-time 60 -fsS 'https://kabu-sokuhou.com/home/index/isort___2ch/ilimit___12/' -o out/kabu.html
+          curl -A "$UA" -L --retry 3 --retry-delay 2 --max-time 60 -fsS 'https://web.archive.org/cdx/search/cdx?url=kabu-sokuhou.com%2Fhome%2Findex%2Fisort___2ch%2Filimit___12%2F&from=2022&to=2026&output=json&filter=statuscode%3A200&fl=timestamp%2Coriginal%2Cstatuscode%2Cdigest&collapse=digest&limit=100' -o out/cdx.json
+          curl -A "$UA" -L --retry 3 --retry-delay 2 --max-time 60 -fsS 'https://query1.finance.yahoo.com/v8/finance/chart/7203.T?period1=1661385600&period2=1787616000&interval=1d&events=history' -o out/yahoo.json
+          curl -A "$UA" -L --retry 3 --retry-delay 2 --max-time 60 -fsS 'https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xls' -o out/jpx.xls
+          wc -c out/*
+          head -c 1000 out/cdx.json || true
+          echo
+          head -c 300 out/yahoo.json || true
+          echo
+      - name: Upload smoke evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kabu-prime-public-smoke-${{ github.run_id }}
+          path: out/
+          retention-days: 1
