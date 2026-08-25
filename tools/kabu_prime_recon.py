@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import time
 import urllib.parse
-import urllib.request
 from collections import Counter
 from pathlib import Path
 
@@ -14,17 +14,28 @@ CDX = "https://web.archive.org/cdx/search/cdx"
 OUT = Path("out")
 
 
-def get_json(params: dict[str, str], retries: int = 4):
+def get_json(params: dict[str, str], retries: int = 5):
     url = CDX + "?" + urllib.parse.urlencode(params)
     last = None
     for attempt in range(retries):
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": UA})
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                return url, json.load(resp)
-        except Exception as exc:  # pragma: no cover - network reconnaissance
-            last = exc
-            time.sleep(2 ** attempt)
+        proc = subprocess.run(
+            [
+                "curl", "-A", UA, "-L", "--retry", "4", "--retry-all-errors",
+                "--retry-delay", "2", "--connect-timeout", "20", "--max-time", "180",
+                "-fsS", url,
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if proc.returncode == 0:
+            try:
+                return url, json.loads(proc.stdout)
+            except json.JSONDecodeError as exc:
+                last = RuntimeError(f"invalid JSON: {exc}; head={proc.stdout[:200]!r}")
+        else:
+            last = RuntimeError(f"curl rc={proc.returncode}: {proc.stderr[-500:]}")
+        time.sleep(2 ** attempt)
     raise RuntimeError(f"CDX failed after {retries} attempts: {url}: {last}")
 
 
@@ -37,20 +48,22 @@ def rows_from(data):
 
 def main() -> None:
     OUT.mkdir(exist_ok=True)
-    queries = {
-        "prefix_home": {
+    queries: dict[str, dict[str, str]] = {}
+    for year in range(2022, 2027):
+        queries[f"prefix_home_{year}"] = {
             "url": "kabu-sokuhou.com/home/index/",
             "matchType": "prefix",
-            "from": "20220404",
-            "to": "20260825",
+            "from": f"{year}0404" if year == 2022 else str(year),
+            "to": "20260825" if year == 2026 else str(year),
             "output": "json",
             "filter": "statuscode:200",
             "fl": "timestamp,original,statuscode,digest,mimetype",
             "collapse": "timestamp:8,original",
-            "limit": "50000",
-        },
-        "root": {
-            "url": "kabu-sokuhou.com/",
+            "limit": "10000",
+        }
+    for host_name, host in (("root", "kabu-sokuhou.com/"), ("www_root", "www.kabu-sokuhou.com/")):
+        queries[host_name] = {
+            "url": host,
             "matchType": "exact",
             "from": "20220404",
             "to": "20260825",
@@ -58,34 +71,24 @@ def main() -> None:
             "filter": "statuscode:200",
             "fl": "timestamp,original,statuscode,digest,mimetype",
             "collapse": "timestamp:8,original",
-            "limit": "50000",
-        },
-        "www_root": {
-            "url": "www.kabu-sokuhou.com/",
-            "matchType": "exact",
-            "from": "20220404",
-            "to": "20260825",
-            "output": "json",
-            "filter": "statuscode:200",
-            "fl": "timestamp,original,statuscode,digest,mimetype",
-            "collapse": "timestamp:8,original",
-            "limit": "50000",
-        },
-    }
+            "limit": "10000",
+        }
 
     all_rows: list[dict[str, str]] = []
     report = {}
     for name, params in queries.items():
-        url, data = get_json(params)
-        rows = rows_from(data)
-        report[name] = {"query": url, "rows": len(rows)}
-        (OUT / f"cdx-{name}.json").write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-        all_rows.extend(rows)
-        time.sleep(1)
+        try:
+            url, data = get_json(params)
+            rows = rows_from(data)
+            report[name] = {"query": url, "rows": len(rows), "ok": True}
+            (OUT / f"cdx-{name}.json").write_text(
+                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            all_rows.extend(rows)
+        except Exception as exc:  # retain other successful query results
+            report[name] = {"rows": 0, "ok": False, "error": str(exc)}
+        time.sleep(2)
 
-    # Keep pages whose content normally contains the general 2ch ranking table.
     def relevant(original: str) -> bool:
         u = urllib.parse.urlsplit(original)
         path = u.path.rstrip("/")
@@ -93,9 +96,10 @@ def main() -> None:
             return True
         if not path.startswith("/home/index"):
             return False
-        # Exclude category/theme filtered pages. Keep default, ranking time windows and pagination.
         blocked = ("/cate___", "/theme___", "/ca___")
         if any(x in path for x in blocked):
+            return False
+        if "/page___" in path and "/page___1" not in path:
             return False
         if "isort___" in path and "isort___2ch" not in path:
             return False
