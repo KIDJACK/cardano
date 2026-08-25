@@ -1,0 +1,64 @@
+--- kabu_prime_backtest.py
++++ kabu_prime_backtest.py
+@@ -514,10 +514,16 @@
+         raise ValueError(rule.entry_mode)
++    # Require the complete planned holding horizon.  Truncating a 10/20-session
++    # strategy at the current data boundary would mix censored one-day trades into the
++    # holdout and can materially bias the result.
++    planned_last_idx = entry_idx + rule.hold_days - 1
++    if planned_last_idx >= len(df):
++        return None
+     entry_exec = entry_raw * (1 + slippage)
+     stop = entry_raw * (1 - rule.stop_pct) if rule.stop_pct else None
+     target = entry_raw * (1 + rule.target_pct) if rule.target_pct else None
+-    last_idx = min(entry_idx + rule.hold_days - 1, len(df) - 1)
++    last_idx = planned_last_idx
+     exit_idx = last_idx
+     exit_raw = float(df.iloc[last_idx]["close"])
+     reason = "time"
+@@ -620,14 +626,25 @@
+     return float(np.min(equity / peaks - 1))
+ 
+ 
+-def bootstrap_mean_ci(values: np.ndarray, seed: int = 20260826, draws: int = 3000) -> tuple[float, float]:
+-    if len(values) < 2:
++def bootstrap_mean_ci_by_signal_date(trades: list[Trade], seed: int = 20260826, draws: int = 3000) -> tuple[float, float]:
++    # Trades triggered by the same archived date share the same market shock.  Resample
++    # whole signal-date clusters rather than pretending that those trades are independent.
++    if len(trades) < 2:
+         return (math.nan, math.nan)
++    grouped: dict[str, list[float]] = defaultdict(list)
++    for trade in trades:
++        grouped[trade.signal_date].append(trade.return_net)
++    clusters = list(grouped.values())
++    if len(clusters) < 2:
++        return (math.nan, math.nan)
+     rng = np.random.default_rng(seed)
+     means = np.empty(draws)
+     for i in range(draws):
+-        means[i] = rng.choice(values, size=len(values), replace=True).mean()
++        sampled = rng.integers(0, len(clusters), size=len(clusters))
++        values = [value for idx in sampled for value in clusters[int(idx)]]
++        means[i] = float(np.mean(values))
+     return float(np.quantile(means, 0.025)), float(np.quantile(means, 0.975))
+ 
+ 
+@@ -644,7 +661,7 @@
+     gains = arr[arr > 0].sum()
+     losses = -arr[arr < 0].sum()
+-    ci = bootstrap_mean_ci(arr) if with_ci else (math.nan, math.nan)
++    ci = bootstrap_mean_ci_by_signal_date(trades) if with_ci else (math.nan, math.nan)
+     return {
+         "n": int(len(arr)),
+         "mean": float(arr.mean()),
+@@ -717,8 +734,8 @@
+         trades = simulate_rule(events, rule, prices, slippage)
+         train = metrics(trades_in_range(trades, splits["train"]))
+         val = metrics(trades_in_range(trades, splits["validation"]))
+-        min_train = 20
+-        min_val = 8
++        min_train = 30
++        min_val = 15
+         passed = (
+             train["n"] >= min_train and val["n"] >= min_val
+             and train["mean"] > 0 and val["mean"] > 0
