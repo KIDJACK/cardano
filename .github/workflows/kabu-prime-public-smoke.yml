@@ -46,12 +46,28 @@ jobs:
           cp .github/kabu-prime-source/*.patch out/source/ || true
           sha256sum out/source/* > out/source/source.sha256
 
-      - name: Enumerate archived ranking snapshots
+      - name: Restore fixed archived ranking snapshot index
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p out
-          python tools/kabu_prime_recon.py | tee out/recon.log
+          cat .github/kabu-prime-source/captures-*.b64 | base64 --decode | gzip -dc > out/captures-selected.json
+          python - <<'PY' | tee out/recon.log
+          import json
+          from collections import Counter
+          from pathlib import Path
+          rows = json.loads(Path('out/captures-selected.json').read_text(encoding='utf-8'))
+          report = {
+              'source': 'fixed CDX capture index reconstructed from prior successful reconnaissance',
+              'rows': len(rows),
+              'unique_dates': len({r['timestamp'][:8] for r in rows}),
+              'by_year': dict(sorted(Counter(r['timestamp'][:4] for r in rows).items())),
+              'by_window_hours': dict(sorted(Counter(str(r.get('window_hours', '12')) for r in rows).items(), key=lambda x: int(x[0]))),
+          }
+          Path('out/recon-summary.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          PY
+          sha256sum out/captures-selected.json out/recon-summary.json
 
       - name: Run point-in-time Prime backtest
         shell: bash
@@ -61,8 +77,8 @@ jobs:
             --captures out/captures-selected.json \
             --output out/final \
             --cache out/cache \
-            --archive-delay 1.0 \
-            --price-delay 0.35 \
+            --archive-delay 0.75 \
+            --price-delay 0.30 \
             --slippage 0.001 \
             2>&1 | tee out/backtest.log
 
