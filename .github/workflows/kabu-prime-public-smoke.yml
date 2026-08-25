@@ -44,7 +44,7 @@ jobs:
               patch -p0 < "$patch_file"
             )
           done
-          echo 'd2dc7658967883f8d9db1d8f0624e396c43b9786d94230cf25ca569f0267bf44  /tmp/kabu_prime_backtest.py' | sha256sum --check --strict
+          echo 'dc3a80ad28179e2a9cfe6df35c6ebd20e0a5d7209791583d155a2f94496ee189  /tmp/kabu_prime_backtest.py' | sha256sum --check --strict
           python -m py_compile /tmp/kabu_prime_backtest.py
           cp /tmp/kabu_prime_backtest.py out/source/
           cp .github/kabu-prime-source/*.patch out/source/
@@ -90,6 +90,7 @@ jobs:
             echo "commit=$GITHUB_SHA"
             echo 'ranking_day_ohlc_used_for_features=0'
             echo 'synthetic_cross_window_rank_signal=0'
+            echo 'same_day_target_after_intraday_limit_fill=0'
             echo 'broker_connections=0'
             echo 'orders=0'
             echo 'account_data=0'
