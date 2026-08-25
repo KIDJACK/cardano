@@ -51,18 +51,23 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p out
-          cat .github/kabu-prime-source/captures-*.b64 | base64 --decode | gzip -dc > out/captures-selected.json
+          base64 --decode .github/kabu-prime-source/captures-fixed.b64 | gzip -dc > out/captures-selected.json
+          echo '1e4bf5c9affa37d14faf1d71f537a779b932b75f9c00dda5df2cdeb7390e9079  out/captures-selected.json' | sha256sum --check --strict
           python - <<'PY' | tee out/recon.log
           import json
+          import re
           from collections import Counter
           from pathlib import Path
           rows = json.loads(Path('out/captures-selected.json').read_text(encoding='utf-8'))
+          def window(row):
+              match = re.search(r'ilimit___(48|24|12|6|3|1)', row.get('original', ''))
+              return match.group(1) if match else '12'
           report = {
               'source': 'fixed CDX capture index reconstructed from prior successful reconnaissance',
               'rows': len(rows),
               'unique_dates': len({r['timestamp'][:8] for r in rows}),
               'by_year': dict(sorted(Counter(r['timestamp'][:4] for r in rows).items())),
-              'by_window_hours': dict(sorted(Counter(str(r.get('window_hours', '12')) for r in rows).items(), key=lambda x: int(x[0]))),
+              'by_window_hours': dict(sorted(Counter(window(r) for r in rows).items(), key=lambda x: int(x[0]))),
           }
           Path('out/recon-summary.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
           print(json.dumps(report, ensure_ascii=False, indent=2))
